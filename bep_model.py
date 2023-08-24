@@ -350,7 +350,6 @@ def obj(coef):
   bep_pred = BEP(w, mu, coef) 
   return np.sum(( q - bep_pred)**2)
 jac = jacobian(obj);  hes = hessian(obj)
-jac = jacobian(obj);  hes = hessian(obj)
 res = minimize(obj, [0.1, 0.1, 0.1, 0.1, 0.1], 
   jac=jac, hess=hes, method='trust-exact')
 coef = res.x

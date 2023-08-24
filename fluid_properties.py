@@ -22,6 +22,9 @@ print('Basic Libraries imported')
 path = os.path.join('data', 'viscosity.csv') 
 df = pd.read_csv(path)# mu Pa-s Tin C
 df.plot(x='t', y='mu', style='.')
+path2 = os.path.join('data', 'viscosityp100.csv') 
+df2 = pd.read_csv(path2)# mu Pa-s Tin C
+df2.plot(x='t', y='mu', style='.')
 
 # %% =======================================================================
 # polynomial prediction
@@ -54,17 +57,27 @@ print('r2 = ',r2_score(df.mu, mu_pred))
 # %% =======================================================================
 # plot prediction
 # ========================================================================== 
+MU1 = lambda T: 0.00026436*T**4 - 0.04864*T**3 + 3.436*T**2 - \
+  114.28*T + 1610.3
 t = np.linspace(df.t.min(), df.t.max(), num=1000)
-plt.plot(df.t, 1000*df.mu, '.', label='data', color='k')
-#plt.plot(t, 1000*MU_poly(t, coef), '-o', label='poly', color='gray', alpha=0.9,
-#  linewidth=2,  markersize=7,  markevery=100)
-plt.plot(t, 1000*MU_exp(t, coef_exp), '-s', label='exp' , color='r',
-  linewidth=2, alpha=1, markersize=10, markevery=100,markerfacecolor='none')
-#plt.yscale('log')
-plt.xlabel('temperature [C]')
-plt.ylabel('viscosity [cP]')
-plt.legend()
+t2 = np.linspace(df2.t.min(), df2.t.max(), num=1000)
 
+fig, ax = plt.subplots()
+ax.plot(df2.t, df2.mu, '.', label='óleo P100', color='gray',markersize=8)
+ax.plot(df.t, 1000*df.mu, '.', label='óleo P47', color='k' ,markersize=8)
+
+#ax.plot(t, 1000*MU_poly(t, coef), '-o', label='poly', color='gray', alpha=0.9,
+#  linewidth=2,  markersize=7,  markevery=100)
+ax.plot(t2, MU1(t2), '-o', label='ajuste P100' , color='r',
+  linewidth=2, alpha=0.7, markersize=10, markevery=100,markerfacecolor='none')
+ax.plot(t, 1000*MU_exp(t, coef_exp), '-s', 
+  label='ajuste P47' , color='r',
+  linewidth=2, alpha=0.7, markersize=10, markevery=100,markerfacecolor='none')
+#plt.yscale('log')
+ax.set_xlabel('temperatura [$\mathrm{^{o} C}$]')
+ax.set_ylabel('viscosidade [cP]')
+ax.legend()
+fig.savefig('result/viscosity.pgf')
 # %% =======================================================================
 # Import data density
 # ==========================================================================
