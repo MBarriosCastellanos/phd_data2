@@ -14,7 +14,11 @@ d_s_a = {                               # arguments transform in h5 file
   'compression':'gzip', 'shuffle':True, 'fletcher32':True }
 sep = os.path.sep                       # path separator independin of OS
 print('Basic Libraries imported')
-
+plt.rcParams['legend.fontsize'] = 6
+plt.rcParams['xtick.labelsize'] = 6
+plt.rcParams['ytick.labelsize'] = 6
+plt.rcParams['axes.titlesize'] = 8
+plt.rcParams['axes.labelsize'] = 8
 
 # %% =======================================================================
 # Import data
@@ -62,22 +66,43 @@ MU1 = lambda T: 0.00026436*T**4 - 0.04864*T**3 + 3.436*T**2 - \
 t = np.linspace(df.t.min(), df.t.max(), num=1000)
 t2 = np.linspace(df2.t.min(), df2.t.max(), num=1000)
 
-fig, ax = plt.subplots()
-ax.plot(df2.t, df2.mu, '.', label='óleo P100', color='gray',markersize=8)
-ax.plot(df.t, 1000*df.mu, '.', label='óleo P47', color='k' ,markersize=8)
+fig, ax = plt.subplots(figsize=(4,3))
+ax.plot(df2.t, df2.mu, '.', label='óleo P100', color='gray',markersize=5)
+ax.plot(df.t, 1000*df.mu, '.', label='óleo P47', color='k' ,markersize=5)
 
 #ax.plot(t, 1000*MU_poly(t, coef), '-o', label='poly', color='gray', alpha=0.9,
 #  linewidth=2,  markersize=7,  markevery=100)
 ax.plot(t2, MU1(t2), '-o', label='ajuste P100' , color='r',
-  linewidth=2, alpha=0.7, markersize=10, markevery=100,markerfacecolor='none')
+  linewidth=2, alpha=0.7, markersize=5, markevery=100,markerfacecolor='none')
 ax.plot(t, 1000*MU_exp(t, coef_exp), '-s', 
   label='ajuste P47' , color='r',
-  linewidth=2, alpha=0.7, markersize=10, markevery=100,markerfacecolor='none')
+  linewidth=2, alpha=0.7, markersize=5, markevery=100,markerfacecolor='none')
 #plt.yscale('log')
 ax.set_xlabel('temperatura [$\mathrm{^{o} C}$]')
 ax.set_ylabel('viscosidade [cP]')
 ax.legend()
 fig.savefig('result/viscosity.pgf')
+
+
+# %% =======================================================================
+# plot prediction
+# ========================================================================== 
+MU1 = lambda T: 0.00026436*T**4 - 0.04864*T**3 + 3.436*T**2 - \
+  114.28*T + 1610.3
+t = np.linspace(df.t.min(), df.t.max(), num=1000)
+t2 = np.linspace(df2.t.min(), df2.t.max(), num=1000)
+
+fig, ax = plt.subplots(figsize=(3.3,2))
+ax.plot(df.t, 1000*df.mu, '.', label='data', color='k' ,markersize=4)
+
+ax.plot(t, 1000*MU_exp(t, coef_exp), '-s', 
+  label='curve adjusted' , color='r',
+  linewidth=2, alpha=0.7, markersize=7, markevery=100,markerfacecolor='none')
+#plt.yscale('log')
+ax.set_xlabel('temperature [$\mathrm{^{o} C}$]')
+ax.set_ylabel('viscosity [cP]')
+ax.legend()
+fig.savefig('result/viscosity2.pgf')
 # %% =======================================================================
 # Import data density
 # ==========================================================================
