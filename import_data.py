@@ -20,7 +20,7 @@ print('Basic Libraries imported')
 # %% =======================================================================
 # list curves
 # ========================================================================== 
-curves = sorted(glob.glob('data/ss*'))[:24]
+curves = sorted(glob.glob('data/ss_2ph*'))[:24]
 curves_kind = []
 k = 0
 df_inf = pd.DataFrame(columns=['k', 'i', 'curve', 'point', 'curve_kind'])
@@ -37,7 +37,6 @@ curves_kind_unique = np.sort(np.unique(curves_kind))
 print('k_max = ', k); k_max = k
 print('get basic data inf')
 time_elapsed(START)               # Time elapsed in the process
-
 
 # %% =======================================================================
 # get process curve
@@ -127,7 +126,7 @@ print('constructed dataframe')
 #%% =======================================================================
 # save dataframe
 # ==========================================================================
-begin = 'ss_1ph'
+begin = 'ss_2ph_'
 names = ['AC2.h5', 'AC3.h5', 'time.h5', 'DF.h5', 'df.h5', 'inf.h5']
 names = [begin + i for i in names]
 
@@ -135,7 +134,7 @@ path = os.path.join('result', names[4])
 dicttoh5(df_mean.to_dict('list'), path, create_dataset_args=d_s_a)  
 
 path = os.path.join('result', names[5]) 
-dicttoh5(df_inf.to_dict('list'), path, create_dataset_args=d_s_a)
+dicttoh5(df_inf.to_dict('list'), path)
 time_elapsed(START)
 
 path = os.path.join('result', names[3]) 
@@ -158,8 +157,4 @@ TIME = pd.DataFrame({'time': TIME})
 dicttoh5(TIME.to_dict('list'), path, create_dataset_args=d_s_a)
 del TIME;    print('Imported time');  time_elapsed(START)
 
-
 time_elapsed(START)
-
-
-# %%

@@ -92,7 +92,7 @@ MU1 = lambda T: 0.00026436*T**4 - 0.04864*T**3 + 3.436*T**2 - \
 t = np.linspace(df.t.min(), df.t.max(), num=1000)
 t2 = np.linspace(df2.t.min(), df2.t.max(), num=1000)
 
-fig, ax = plt.subplots(figsize=(3.3,2))
+fig, ax = plt.subplots(figsize=(3.1,1.7))
 ax.plot(df.t, 1000*df.mu, '.', label='data', color='k' ,markersize=4)
 
 ax.plot(t, 1000*MU_exp(t, coef_exp), '-s', 
