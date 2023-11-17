@@ -10,6 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_absolute_error, r2_score
 from silx.io.dictdump import h5todict, dicttoh5 # import, export h5 files
+from thermo.chemical import Chemical            # chemical properties
 d_s_a = {                               # arguments transform in h5 file
   'compression':'gzip', 'shuffle':True, 'fletcher32':True }
 sep = os.path.sep                       # path separator independin of OS
@@ -19,6 +20,7 @@ plt.rcParams['xtick.labelsize'] = 6
 plt.rcParams['ytick.labelsize'] = 6
 plt.rcParams['axes.titlesize'] = 8
 plt.rcParams['axes.labelsize'] = 8
+
 
 # %% =======================================================================
 # Import data
@@ -143,3 +145,51 @@ model  = {} if len(glob.glob(path))==0 else h5todict(path)
 model['mu'] = coef_exp
 model['rho'] = coef
 dicttoh5(model, path, create_dataset_args=d_s_a)
+
+# %% =======================================================================
+# adjust data to model water and oil properties
+# ==========================================================================
+t = np.linspace(10, 90, num=8001) 
+rho_w = np.zeros(len(t));    mu_w = np.zeros(len(t))
+for i in range(len(t)):
+  rho_w[i] = Chemical('Water',T = t[i]+ 273.15).rho   
+  mu_w[i] =  Chemical('Water',T = t[i]+ 273.15).mu 
+
+# %% =======================================================================
+# polynomial adjust
+# ========================================================================== 
+# Polynomial model function
+MU_poly = lambda t, coef: np.sum(np.array([
+  coef[i]*t**(len(coef)- i- 1) for i in range(len(coef))]), axis=0)
+# ---------------------------------------------------------------------------
+coef_mu = np.polyfit(t, mu_w, 4)
+mu_pred_w = MU_poly(t, coef_mu)
+print('coef = ', coef_mu)
+print('mae = ', 100*mean_absolute_error(mu_w, mu_pred_w))
+print('r2 = ',r2_score(mu_w, mu_pred_w))
+plt.plot(t, 1e3*mu_w, '.')
+plt.plot(t, 1e3*mu_pred, '-'); 
+plt.plot(t, 1e3*(coef_mu[4] + t*coef_mu[3] + t**2*coef_mu[2] + 
+  t**3*coef_mu[1] + t**4*coef_mu[0]), '--'); 
+plt.show()
+# ---------------------------------------------------------------------------
+coef_rho = np.polyfit(t, rho_w, 4)
+rho_pred_w = MU_poly(t, coef_rho)
+print('coef = ', coef_rho)
+print('mae = ', 100*mean_absolute_error(rho_w, rho_pred_w))
+print('r2 = ',r2_score(rho_w, rho_pred_w))
+plt.plot(t, rho_w, '.')
+plt.plot(t, rho_pred_w, '-')
+plt.plot(t, (coef_rho[4] + t*coef_rho[3] + t**2*coef_rho[2] + 
+  t**3*coef_rho[1] + t**4*coef_rho[0]), '--'); 
+
+# %% =======================================================================
+# save model
+# ==========================================================================
+path = os.path.join('result', 'model2.h5') 
+model  = {} if len(glob.glob(path))==0 else h5todict(path)
+model['mu_w'] = coef_mu
+model['rho_w'] = coef_rho
+dicttoh5(model, path, create_dataset_args=d_s_a)
+
+# %%

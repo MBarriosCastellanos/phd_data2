@@ -45,7 +45,9 @@ RE = lambda rho, d, q, mu: 4*rho*q/(mu*np.pi*d)
 class Sample(object):
   def __init__(self, path): 
     #print('Get data of ' + path)
-    self.path_control_signal = path + sep + 'control_signals.csv'
+    #self.path_control_signal = path + sep + 'control_signals.csv'
+    self.path_control_signal = os.sep.join(
+      path.split(os.sep)[:2] + ['control_signals.csv'])
     self.path_process = path + sep + 'process.tdms'
     self.data_control_in = {}     # data of control original len
     self.data_control = {}        # data of control of size  self.len
@@ -137,17 +139,17 @@ class Sample(object):
       dtype='float')*1e-6       #   change from [micro-s] to [s] 
     values = np.array(          # values of control variables changes in
       self.csv[:,2:], dtype='float')  # respective timestamp
-    if len(glob.glob(self.path_control_signal))>0:
-      for c in self.controls:     # fill every key in dict with columns [1,2] 
-        i = np.where(             #  in column [0] where the control is c 
-          c == self.csv[:,1])[0]  #   
-        self.data_control_in[c] = np.c_[time[i], values[i]]
-        # ================================================================== #
-        self.data_control[c] = fill(  t = self.data_process['time'], 
-                                      t1 = self.data_control_in[c][:,0], 
-                                      y1 = self.data_control_in[c][:,1],
-                                      y_in = self.data_control_in[c][0,2])
-    elif self.path_process.split(sep)[-1] == 'process.tdms':
+    #if len(glob.glob(self.path_control_signal))>0:
+    #  for c in self.controls:     # fill every key in dict with columns [1,2] 
+    #    i = np.where(             #  in column [0] where the control is c 
+    #      c == self.csv[:,1])[0]  #   
+    #    self.data_control_in[c] = np.c_[time[i], values[i]]
+    #    # ================================================================== #
+    #    self.data_control[c] = fill(  t = self.data_process['time'], 
+    #                                  t1 = self.data_control_in[c][:,0], 
+    #                                  y1 = self.data_control_in[c][:,1],
+    #                                  y_in = self.data_control_in[c][0,2])
+    if self.path_process.split(sep)[-1] == 'process.tdms':
       values = self.path_process.split(sep)[-2].split('_')
       for value in values:
         value = value.split('-')

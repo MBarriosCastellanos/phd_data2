@@ -5,7 +5,7 @@ from silx.io.dictdump import h5todict, dicttoh5 # import, export h5 files
 import autograd.numpy as np                     # mathematics 
 import pandas as pd                             # dataframes
 import os                                       # sort files 
-import glob                                     # global folers+
+import glob                                     # global folers
 from thermo.chemical import Chemical    # chemical properties
 from scipy.constants import g as g      # gravitationa constant
 sep = os.path.sep                       # path separator independin of OS
@@ -15,15 +15,51 @@ d_s_a = {                               # arguments transform in h5 file
   'compression':'gzip', 'shuffle':True, 'fletcher32':True }
 import time;    START = time.time()             # time calculation
 print('Basic Libraries imported')
-                  
+from nptdms import TdmsFile             # import .tdms files
+import matplotlib.pyplot as plt
+plt.rcParams['legend.fontsize'] = 18
+plt.rcParams['xtick.labelsize'] = 18
+plt.rcParams['ytick.labelsize'] = 18
+plt.rcParams['axes.titlesize'] = 18
+plt.rcParams['axes.labelsize'] = 18
+
+# %% =======================================================================
+# function 
+# ========================================================================== 
+def set_control_var(exp, df):
+  # compare
+  time_changes = list(exp.csv[:, 0])
+  time_exp = exp.timestamp['timestamp']
+
+  # Convert strings to NumPy datetime objects
+  datetime_changes = np.array(time_changes, dtype='datetime64')
+  datetime_changes += np.timedelta64(3, 'h')
+  datetime_exp = np.array(time_exp, dtype='datetime64')
+
+  # Find the reference time point
+  reference_time = min(datetime_changes.min(), datetime_exp.min())
+
+  time_changes_float = (datetime_changes - reference_time) / np.timedelta64(1, 's')
+  time_exp_float = (datetime_exp - reference_time) / np.timedelta64(1, 's')
+
+  ii = np.where(time_changes_float>time_exp_float.min())[0][0]
+  jj = np.where(time_changes_float<time_exp_float.max())[0][-1]
+  _, control, new, old = exp.csv[ii]
+  new =  float(new)
+  old = float(old)
+  df_control = (time_exp_float>time_changes_float[ii])*new + \
+    (time_exp_float<=time_changes_float[ii])*old 
+  df[control] = df_control
+  return df
 
 # %% =======================================================================
 # list curves
 # ========================================================================== 
-curves = sorted(glob.glob('data/ss_2ph*'))[:24]
+curves = sorted(glob.glob('data/dn_1ph*'))[:24]
 curves_kind = []
 k = 0
 df_inf = pd.DataFrame(columns=['k', 'i', 'curve', 'point', 'curve_kind'])
+timestamp = []
 for i, curve in enumerate(curves):
   print(('%s %s %s'%(i, curve, k)).center(70, '.'))
   curve_list = curve.split(sep)[-1].split('_')
@@ -33,10 +69,24 @@ for i, curve in enumerate(curves):
     df_inf.loc[k, :] = [k, str(i), curve, 
       path.split(sep)[-1], curve_kind] 
     k+=1
+    path_process = path + sep + 'process.tdms'
+    tdms = TdmsFile.read(path_process) 
+    names = names = sorted(list(tdms['channels']._channels.keys()))
+    start_time = tdms['channels']['timestamp'][:][0]
+    start_time = np.array(start_time, dtype='datetime64')
+    start_time = start_time.astype(np.int64) / 10**6
+    timestamp.append(start_time)
 curves_kind_unique = np.sort(np.unique(curves_kind))
+df_inf['time'] = timestamp
+
+df_inf = df_inf.sort_values(by=['curve', 'time'])
+df_inf['k'] = range(len(df_inf))
+df_inf.index = range(len(df_inf))
+
 print('k_max = ', k); k_max = k
 print('get basic data inf')
 time_elapsed(START)               # Time elapsed in the process
+
 
 # %% =======================================================================
 # get process curve
@@ -51,28 +101,40 @@ As a result, the new size is 3250 for process sampling and \
 each representing an 11-second duration.'''
 k = 0
 paths_del = []; DF = []; b = []; f =[]
+#for i in df_inf.index:
+curves = list(np.unique(df_inf.curve))
 for i, curve in enumerate(curves):
-  for path in sorted(glob.glob(curve + '/e*')):
+  points = df_inf[df_inf.curve==curve].point
+  for point in points:
     printProgressBar(k + 1, k_max, prefix = '%s/%s'%(k+1,k_max), )
+    path = sep.join([curve, point])
+    # check point 
+    k_df = df_inf[(df_inf.curve==curve) & (df_inf.point==point)]
+    k_df = k_df.iloc[0, 0]
+    #if k_df != k:
+    #  print(' not coincide k '.rleft(70, '█')) 
+
     # get process experiment -----------------------------------------------
     exp = Sample(path);                 exp.set_data()
     df = pd.DataFrame(exp.data)
-    if np.shape(df)[0]!=3750 or np.shape(df)[1]!=33:
-      paths_del.append(path)
-      print(' incomplete path '.center(70, '█'))  
-      continue
+    if len(point.split('-'))>5:
+      df = set_control_var(exp, df)
 
     # get vibration experiment ---------------------------------------------
     exp_vib = Sample_vib(path);     exp_vib.set_data()
     df_vib = pd.DataFrame(exp_vib.data)
-    if np.shape(df_vib)[0]!=768000 or np.shape(df_vib)[1]!=8:
-      paths_del.append(path)
-      print(' incomplete path by vibration '.center(70, '█'))  
-      continue
 
     # filtering of rotation sampling ---------------------------------------
     df['ESP_rotation'] = combined_filter(df['time'], df['ESP_rotation'], 
       10, 10/3, 20)
+
+    # check relation of process vibrationd data ----------------------------
+    rel = len(df_vib)/len(df)
+    if rel <202 or rel>205:
+      print(path)
+      print('relation vib/process', len(df_vib)/len(df))
+      paths_del.append(path)
+
     # cut the sampling due to filtering ------------------------------------
     df = df.iloc[500:-500];     df_vib = df_vib.iloc[102400: -102400]
     df.index = range(len(df));  df_vib.index = range(len(df_vib))
@@ -89,7 +151,8 @@ for i, curve in enumerate(curves):
     curve_kind = curves_kind[i] # curve kind fo this exp
     df_i['i_curve'] = i
     df_i['k'] = k;        
-    df_i['curve_kind'] = 10 #np.where(curves_kind_unique==curve_kind)[0][0]
+    df_i['curve_kind'] = 2     # curve kind is the kind of curve
+    #df_i['curve_kind'] = np.where(curves_kind_unique==curve_kind)[0][0]
     df_vib['k'] = k
 
     # correct time due filtering ------------------------------------------
@@ -115,6 +178,17 @@ for i, curve in enumerate(curves):
       time_elapsed(START)               # Time elapsed in the process
     k+=1
     #del ac2, ac3, df_i, df_j, df, df_vib, exp, exp_vib, df_mean_i, time
+    #if len(point.split('-'))>5:
+    fig, ax = plt.subplots(figsize=(20,20))
+    ax.plot(df_i['time'], df_i['ESP_rotation'], '--', color='gray')
+    ax.plot(df_i['time'], df_i['esp_rotation'], '--', color='k')
+    ax2 = ax.twinx()
+    ax2.plot(df_i['time'], df_i['choke_esp'], color='r')
+    fig.suptitle((curve, point), fontsize=20)
+    fig.savefig('figures/' + str(i) + '_' + point)
+    plt.close()
+    #  plt.show()
+
 print('last k is =', k)
 time_elapsed(START)               # Time elapsed in the process
 print('pahts to delete ', paths_del)
@@ -124,9 +198,18 @@ print('constructed dataframe')
 
 
 #%% =======================================================================
+# test matrix
+# ==========================================================================
+exp = Sample(path);                 exp.set_data()
+df = pd.DataFrame(exp.data)
+
+
+
+
+#%% =======================================================================
 # save dataframe
 # ==========================================================================
-begin = 'ss_2ph_'
+begin = 'dn_1ph_'
 names = ['AC2.h5', 'AC3.h5', 'time.h5', 'DF.h5', 'df.h5', 'inf.h5']
 names = [begin + i for i in names]
 
