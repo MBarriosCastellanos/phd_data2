@@ -59,6 +59,14 @@ print('k_max = ', k); k_max = k
 print('get basic data inf')
 time_elapsed(START)               # Time elapsed in the process
 
+# %% =======================================================================
+# see how the python program process de data
+# ==========================================================================
+data_point = h5todict('data/ct_1ph_0_0000rpm_35c_50wc/1700745079.h5')
+print('processing time', len(data_point['P_1']['data'] )/250, '[s]')
+print('processing time', len(data_point['P_9']['data'] )/250, '[s]')
+print('processing time', len(data_point['T_2']['data'] )/250, '[s]')
+print('processing time', len(data_point['AC-03']['data'] )/51000, '[s]')
 
 # %% =======================================================================
 # get process curve
